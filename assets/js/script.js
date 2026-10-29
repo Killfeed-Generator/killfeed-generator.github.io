@@ -1,0 +1,1577 @@
+var nr = 0;
+var globalFlip = false;
+var settings = {};
+
+function players_apply() {
+  var player_1 = document.getElementById("player_1").value;
+  var player_2 = document.getElementById("player_2").value;
+  var p1 = document.getElementsByClassName("player1");
+  for (var i = 0; i < p1.length; i++) {
+    p1[i].innerHTML = player_1;
+  }
+  var p2 = document.getElementsByClassName("player2");
+  for (var i = 0; i < p2.length; i++) {
+    p2[i].innerHTML = player_2;
+  }
+  updatePlayerParams(player_1, player_2);
+}
+
+function updatePlayerParams(player_1, player_2) {
+  var hashAnchor = window.location.hash.split("?")[0] || "";
+  var params = {};
+  var sources = [window.location.search, window.location.hash];
+  sources.forEach(function (source) {
+    if (!source || source.indexOf("?") === -1) {
+      return;
+    }
+    source
+      .split("?")[1]
+      .split("&")
+      .forEach(function (pair) {
+        var parts = pair.split("=");
+        if (parts[0]) {
+          params[decodeURIComponent(parts[0])] = decodeURIComponent(
+            parts[1] || "",
+          );
+        }
+      });
+  });
+  params["player_1"] = player_1;
+  params["player_2"] = player_2;
+  var pairs = [];
+  Object.keys(params).forEach(function (key) {
+    pairs.push(encodeURIComponent(key) + "=" + encodeURIComponent(params[key]));
+  });
+  var newUrl = window.location.pathname + "?" + pairs.join("&") + hashAnchor;
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, "", newUrl);
+  } else {
+    window.location.hash = hashAnchor + "?" + pairs.join("&");
+  }
+}
+
+function customize() {
+  $("#options").toggle();
+  $("#customize").toggleClass("btn-active");
+}
+
+function elValue(id, fallback) {
+  var el = document.getElementById(id);
+  return el ? el.value : fallback;
+}
+
+function hexToRgba(hex, opacity) {
+  var clean = (hex || "#000000").replace("#", "");
+  if (clean.length === 3) {
+    clean = clean
+      .split("")
+      .map(function (c) {
+        return c + c;
+      })
+      .join("");
+  }
+  var num = parseInt(clean, 16);
+  if (isNaN(num)) {
+    num = 0;
+  }
+  var r = (num >> 16) & 255;
+  var g = (num >> 8) & 255;
+  var b = num & 255;
+  return "rgba(" + r + ", " + g + ", " + b + ", " + opacity + ")";
+}
+
+function applyItemStyle() {
+  var root = document.documentElement;
+  var fontColor1 = elValue(
+    "item_font_color_1",
+    elValue("item_font_color", "#ffffff"),
+  );
+  var fontColor2 = elValue(
+    "item_font_color_2",
+    elValue("item_font_color", "#ffffff"),
+  );
+  var bgColor = elValue("item_bg_color", "#0c0c0c");
+  var bgOpacity = parseFloat(elValue("item_bg_opacity", "100")) || 100;
+  var borderWidth = elValue("item_border_width", "2");
+  var borderRadius = elValue("item_border_radius", "0");
+  root.style.setProperty(
+    "--kg-font-size-selected",
+    document.getElementById("item_font_size").value + "px",
+  );
+  root.style.setProperty(
+    "--kg-font-family-selected",
+    "'" + document.getElementById("item_font_family").value + "'",
+  );
+  root.style.setProperty(
+    "--kg-font-weight-selected",
+    document.getElementById("item_font_weight")
+      ? document.getElementById("item_font_weight").value
+      : "500",
+  );
+  root.style.setProperty(
+    "--kg-p-x-selected",
+    document.getElementById("item_p_x").value + "px",
+  );
+  root.style.setProperty(
+    "--kg-p-y-selected",
+    document.getElementById("item_p_y").value + "px",
+  );
+  root.style.setProperty("--kg-font-color-selected", fontColor1);
+  root.style.setProperty("--kg-font-color-1-selected", fontColor1);
+  root.style.setProperty("--kg-font-color-2-selected", fontColor2);
+  root.style.setProperty(
+    "--kg-background-color-selected",
+    hexToRgba(bgColor, bgOpacity / 100),
+  );
+  var borderColor = elValue("item_border_color", "#1d1d1d");
+  var borderOpacity = parseFloat(elValue("item_border_opacity", "100")) || 100;
+  root.style.setProperty("--kg-border-width-selected", borderWidth + "px");
+  root.style.setProperty(
+    "--kg-border-color-selected",
+    hexToRgba(borderColor, borderOpacity / 100),
+  );
+  root.style.setProperty("--kg-border-radius-selected", borderRadius + "px");
+  var itemsShadow = parseFloat(elValue("item_icon_shadow", "0")) || 0;
+  var ratio = itemsShadow / 100;
+  var iconMaxH = 50;
+  var shadowOffset = (iconMaxH * 0.02 * ratio).toFixed(2);
+  var shadowBlur = (iconMaxH * 0.1 * ratio).toFixed(2);
+  root.style.setProperty("--kg-items-shadow-x-selected", shadowOffset + "px");
+  root.style.setProperty("--kg-items-shadow-y-selected", shadowOffset + "px");
+  root.style.setProperty("--kg-items-shadow-blur-selected", shadowBlur + "px");
+  root.style.setProperty(
+    "--kg-items-shadow-color-selected",
+    "rgba(0, 0, 0, " + (0.8 * ratio).toFixed(2) + ")",
+  );
+  var iconSize = parseFloat(elValue("item_icon_size", "50")) || 50;
+  if (iconSize <= 0) {
+    iconSize = 50;
+  }
+  root.style.setProperty("--kg-icon-size-selected", iconSize + "px");
+  var itemsGap = parseFloat(elValue("item_gap", "10"));
+  if (isNaN(itemsGap)) {
+    itemsGap = 10;
+  }
+  root.style.setProperty("--kg-gap-selected", itemsGap + "px");
+  root.style.setProperty("--kg-stack-gap", (itemsGap * 1.2).toFixed(2) + "px");
+  var posEl = document.getElementById("item_position");
+  var posValue = posEl ? posEl.value : "top:6%;right:2%";
+  var posTokens = {
+    top: "",
+    right: "",
+    bottom: "",
+    left: "",
+  };
+  String(posValue)
+    .split(";")
+    .forEach(function (part) {
+      var kv = part.split(":");
+      if (kv.length === 2) {
+        var key = kv[0].trim().toLowerCase();
+        if (posTokens.hasOwnProperty(key)) {
+          posTokens[key] = kv[1].trim();
+        }
+      }
+    });
+  root.style.setProperty("--kg-item-pos-top", posTokens.top || "auto");
+  root.style.setProperty("--kg-item-pos-right", posTokens.right || "auto");
+  root.style.setProperty("--kg-item-pos-bottom", posTokens.bottom || "auto");
+  root.style.setProperty("--kg-item-pos-left", posTokens.left || "auto");
+}
+
+function loadFontFromUrl(src, family) {
+  var familyValue = family || "CustomFont";
+  var srcValue = src || document.getElementById("item_font_src").value.trim();
+  if (!srcValue) {
+    console.warn("Provide a Font URL.");
+    return;
+  }
+  var style = document.createElement("style");
+  style.innerHTML =
+    "@font-face { font-family: '" +
+    familyValue +
+    "'; src: url('" +
+    srcValue +
+    "'); }";
+  document.head.appendChild(style);
+  document.documentElement.style.setProperty(
+    "--kg-font-family-selected",
+    "'" + familyValue + "'",
+  );
+  console.log("Loading font: " + familyValue + " from " + srcValue);
+}
+
+function loadExampleFont(src, family) {
+  if (!src) {
+    return;
+  }
+  var srcInput = document.getElementById("item_font_src");
+  if (srcInput) {
+    srcInput.value = src;
+  }
+  loadFontFromUrl(src, family);
+}
+
+function loadImage(src) {
+  return new Promise(function (resolve, reject) {
+    fetch(src)
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("Failed to load image: " + src);
+        }
+        return response.blob();
+      })
+      .then(function (blob) {
+        var objectUrl = URL.createObjectURL(blob);
+        var img = new Image();
+        img.onload = function () {
+          URL.revokeObjectURL(objectUrl);
+          resolve(img);
+        };
+        img.onerror = function () {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error("Failed to load image: " + src));
+        };
+        img.src = objectUrl;
+      })
+      .catch(function (err) {
+        reject(err);
+      });
+  });
+}
+
+function drawKillfeedItem(item, scale) {
+  return new Promise(function (resolve, reject) {
+    var spec = window.getComputedStyle(item);
+    var isFontFamilyKnown =
+      spec.fontFamily && spec.fontFamily.indexOf("serif") === -1;
+
+    var rootStyle = window.getComputedStyle(document.documentElement);
+    var varFamily = (
+      rootStyle.getPropertyValue("--kg-font-family-selected") || ""
+    )
+      .replace(/["']/g, "")
+      .trim();
+    var varSize = rootStyle.getPropertyValue("--kg-font-size-selected") || "";
+    var varWeight =
+      rootStyle.getPropertyValue("--kg-font-weight-selected") || "";
+
+    var fontFamily = isFontFamilyKnown
+      ? spec.fontFamily.replace(/["']/g, "")
+      : varFamily || "Roboto-Medium";
+    var fontSize = isFontFamilyKnown
+      ? parseFloat(spec.fontSize)
+      : parseFloat(varSize);
+    fontSize = fontSize && fontSize > 0 ? fontSize : 25;
+    var fontWeight = varWeight ? varWeight.trim() : "500";
+
+    var fontColor =
+      spec.color && spec.color !== "rgb(0, 0, 0)" ? spec.color : "#000";
+    var bgColor = spec.backgroundColor || "#fff";
+    var borderWidth = parseFloat(spec.borderLeftWidth) || 0;
+    var borderColor = spec.borderColor || "#000";
+    var padX = parseFloat(spec.paddingLeft) || 0;
+    var padY = parseFloat(spec.paddingTop) || 0;
+
+    var p1El = item.querySelector(".player1");
+    var p2El = item.querySelector(".player2");
+    var player1 = p1El ? p1El.textContent : "";
+    var player2 = p2El ? p2El.textContent : "";
+    var fontColor1 = p1El
+      ? window.getComputedStyle(p1El).color
+      : spec.color || "#000";
+    var fontColor2 = p2El
+      ? window.getComputedStyle(p2El).color
+      : spec.color || "#000";
+    var borderRadiusSpec = parseFloat(spec.borderTopLeftRadius) || 0;
+
+    var weaponEl = null;
+    for (var wi = 0; wi < item.children.length; wi++) {
+      var childEl = item.children[wi];
+      if (childEl.tagName === "IMG" && childEl.classList.contains("sp_icon")) {
+        weaponEl = childEl;
+        break;
+      }
+    }
+    if (!weaponEl) {
+      weaponEl = item.querySelector("img.sp_icon");
+    }
+    var isWeaponFlipped = weaponEl
+      ? weaponEl.classList.contains("flip-horizontal")
+      : false;
+    var prefixEls = Array.prototype.slice.call(
+      item.querySelectorAll(".additional[data-location='prefix']"),
+    );
+    var suffixEls = Array.prototype.slice.call(
+      item.querySelectorAll(".additional[data-location='suffix']"),
+    );
+    var weaponSrc = weaponEl ? weaponEl.getAttribute("src") : null;
+
+    function slotMargin(slot) {
+      var style = window.getComputedStyle(slot);
+      return {
+        top: parseFloat(style.marginTop) || 0,
+        right: parseFloat(style.marginRight) || 0,
+        bottom: parseFloat(style.marginBottom) || 0,
+        left: parseFloat(style.marginLeft) || 0,
+      };
+    }
+
+    var prefixMargins = prefixEls.map(slotMargin);
+    var suffixMargins = suffixEls.map(slotMargin);
+
+    function loadSlotImage(slot) {
+      var imgEl = slot ? slot.querySelector("img") : null;
+      var src = imgEl ? imgEl.getAttribute("src") : null;
+      return src ? loadImage(src) : Promise.resolve(null);
+    }
+
+    var weaponPromise = weaponSrc
+      ? loadImage(weaponSrc)
+      : Promise.resolve(null);
+    var prefixPromises = prefixEls.map(loadSlotImage);
+    var suffixPromises = suffixEls.map(loadSlotImage);
+
+    Promise.all([weaponPromise].concat(prefixPromises, suffixPromises))
+      .then(function (imgs) {
+        var weapon = imgs[0] || null;
+        var prefixImages = imgs.slice(1, 1 + prefixPromises.length);
+        var suffixImages = imgs.slice(1 + prefixPromises.length);
+
+        var probe = document.createElement("canvas");
+        var pctx = probe.getContext("2d");
+        pctx.font = fontWeight + " " + fontSize + "px " + fontFamily;
+        var w1 = pctx.measureText(player1).width;
+        var w2 = pctx.measureText(player2).width;
+
+        var rootStyleSel = window.getComputedStyle(document.documentElement);
+        var iconSizeVal = parseFloat(
+          rootStyleSel.getPropertyValue("--kg-icon-size-selected"),
+        );
+        var iconMaxH =
+          iconSizeVal && iconSizeVal > 0
+            ? iconSizeVal
+            : Math.min(fontSize * 2, 50);
+        var gapVal = parseFloat(
+          rootStyleSel.getPropertyValue("--kg-gap-selected"),
+        );
+        var gap = isNaN(gapVal) ? 10 : gapVal;
+        var innerH = Math.max(fontSize, iconMaxH);
+        var weaponW = weapon
+          ? iconMaxH * (weapon.naturalWidth / weapon.naturalHeight)
+          : 0;
+        var prefixW = prefixImages.map(function (img) {
+          return img ? iconMaxH * (img.naturalWidth / img.naturalHeight) : 0;
+        });
+        var suffixW = suffixImages.map(function (img) {
+          return img ? iconMaxH * (img.naturalWidth / img.naturalHeight) : 0;
+        });
+
+        var contentW = w1 + gap;
+        prefixW.forEach(function (w, index) {
+          if (!w) {
+            return;
+          }
+          var margin = prefixMargins[index];
+          contentW += gap + margin.left + w + margin.right;
+        });
+        contentW += weaponW ? gap + weaponW : 0;
+        suffixW.forEach(function (w, index) {
+          if (!w) {
+            return;
+          }
+          var margin = suffixMargins[index];
+          contentW += gap + margin.left + w + margin.right;
+        });
+        contentW += gap + w2;
+        var totalW = contentW + padX * 2 + borderWidth * 2;
+        var totalH = innerH + padY * 2 + borderWidth * 2;
+        var centerY = totalH / 2;
+
+        var canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(totalW * scale));
+        canvas.height = Math.max(1, Math.round(totalH * scale));
+        var ctx = canvas.getContext("2d");
+        ctx.scale(scale, scale);
+
+        ctx.fillStyle = bgColor;
+        if (borderRadiusSpec > 0) {
+          ctx.beginPath();
+          ctx.roundRect(0, 0, totalW, totalH, borderRadiusSpec);
+          ctx.fill();
+        } else {
+          ctx.fillRect(0, 0, totalW, totalH);
+        }
+
+        if (borderWidth > 0) {
+          ctx.lineWidth = borderWidth;
+          ctx.strokeStyle = borderColor;
+          if (borderRadiusSpec > 0) {
+            ctx.beginPath();
+            ctx.roundRect(
+              borderWidth / 2,
+              borderWidth / 2,
+              totalW - borderWidth,
+              totalH - borderWidth,
+              borderRadiusSpec,
+            );
+            ctx.stroke();
+          } else {
+            ctx.strokeRect(
+              borderWidth / 2,
+              borderWidth / 2,
+              totalW - borderWidth,
+              totalH - borderWidth,
+            );
+          }
+        }
+
+        ctx.font = fontWeight + " " + fontSize + "px " + fontFamily;
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "left";
+        ctx.fillStyle = fontColor1;
+
+        var rootStyle = window.getComputedStyle(document.documentElement);
+        var iconShadow = {
+          x:
+            parseFloat(
+              rootStyle.getPropertyValue("--kg-items-shadow-x-selected"),
+            ) || 0,
+          y:
+            parseFloat(
+              rootStyle.getPropertyValue("--kg-items-shadow-y-selected"),
+            ) || 0,
+          blur:
+            parseFloat(
+              rootStyle.getPropertyValue("--kg-items-shadow-blur-selected"),
+            ) || 0,
+          color:
+            rootStyle.getPropertyValue("--kg-items-shadow-color-selected") ||
+            "rgba(0, 0, 0, 0)",
+        };
+        if (iconShadow.x || iconShadow.y || iconShadow.blur) {
+          ctx.shadowColor = iconShadow.color;
+          ctx.shadowOffsetX = iconShadow.x;
+          ctx.shadowOffsetY = iconShadow.y;
+          ctx.shadowBlur = iconShadow.blur;
+        }
+
+        var cursor = borderWidth + padX;
+        ctx.fillText(player1, cursor, centerY);
+        cursor += w1 + gap;
+
+        for (var p = 0; p < prefixImages.length; p++) {
+          var pImg = prefixImages[p];
+          var pW = prefixW[p];
+          if (!pImg || !pW) {
+            continue;
+          }
+          var pMargin = prefixMargins[p];
+          var pX = cursor + pMargin.left;
+          var pY =
+            centerY - iconMaxH / 2 + (pMargin.top - pMargin.bottom) / 2;
+          ctx.drawImage(pImg, pX, pY, pW, iconMaxH);
+          cursor += pMargin.left + pW + pMargin.right + gap;
+        }
+
+        if (weapon) {
+          ctx.save();
+          if (isWeaponFlipped) {
+            ctx.translate(cursor + weaponW / 2, centerY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(
+              weapon,
+              -weaponW / 2,
+              -iconMaxH / 2,
+              weaponW,
+              iconMaxH,
+            );
+          } else {
+            ctx.drawImage(
+              weapon,
+              cursor,
+              centerY - iconMaxH / 2,
+              weaponW,
+              iconMaxH,
+            );
+          }
+          ctx.restore();
+          cursor += weaponW + gap;
+        }
+
+        for (var a = 0; a < suffixImages.length; a++) {
+          var aImg = suffixImages[a];
+          var aW = suffixW[a];
+          if (!aImg || !aW) {
+            continue;
+          }
+          var aMargin = suffixMargins[a];
+          var aX = cursor + aMargin.left;
+          var aY =
+            centerY - iconMaxH / 2 + (aMargin.top - aMargin.bottom) / 2;
+          ctx.drawImage(aImg, aX, aY, aW, iconMaxH);
+          cursor += aMargin.left + aW + aMargin.right + gap;
+        }
+
+        ctx.fillStyle = fontColor2;
+        ctx.fillText(player2, cursor, centerY);
+
+        ctx.shadowColor = "transparent";
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+
+        resolve(canvas);
+      })
+      .catch(reject);
+  });
+}
+
+function renderElementToCanvas(element) {
+  return new Promise(function (resolve, reject) {
+    var items;
+    if (element.classList && element.classList.contains("killfeed-item")) {
+      items = [element];
+    } else {
+      items = Array.prototype.slice.call(
+        element.querySelectorAll(".killfeed-item"),
+      );
+    }
+    var scale = 2;
+    if (!items.length) {
+      reject(new Error("No .killfeed-item found to render."));
+      return;
+    }
+    Promise.all(
+      items.map(function (item) {
+        return drawKillfeedItem(item, scale);
+      }),
+    )
+      .then(function (canvases) {
+        resolve(canvases.length === 1 ? canvases[0] : canvases);
+      })
+      .catch(reject);
+  });
+}
+
+function combineCanvases(canvases) {
+  var gap = 16;
+  var maxWidth = 0;
+  var totalHeight = 0;
+  canvases.forEach(function (canvas) {
+    maxWidth = Math.max(maxWidth, canvas.width);
+    totalHeight += canvas.height;
+  });
+  totalHeight += gap * (canvases.length - 1);
+
+  var combined = document.createElement("canvas");
+  combined.width = maxWidth;
+  combined.height = totalHeight;
+  var ctx = combined.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, combined.width, combined.height);
+
+  var y = 0;
+  canvases.forEach(function (canvas) {
+    ctx.drawImage(canvas, (maxWidth - canvas.width) / 2, y);
+    y += canvas.height + gap;
+  });
+  return combined;
+}
+
+function takeScreenShot() {
+  document.getElementById("download_img").style.display = "flex";
+  document.getElementById("convert_elem_msg").style.display = "flex";
+
+  var preview = document.getElementById("target_preview");
+  var source =
+    preview &&
+    (preview.classList.contains("killfeed-item") ||
+      preview.querySelector(".killfeed-item"))
+      ? preview
+      : document.getElementById("killfeed-generator");
+
+  var allContent = document.getElementById("download1").checked;
+
+  return renderElementToCanvas(source).then(function (result) {
+    var canvases = Array.isArray(result) ? result : [result];
+    if (allContent && canvases.length > 1) {
+      var combined = combineCanvases(canvases);
+      combined.id = "IMG_" + nr + "_all";
+      nr++;
+      var downloadImg = document.getElementById("download_img");
+      downloadImg.insertAdjacentElement("afterend", combined);
+      combined.scrollIntoView();
+      return [combined];
+    }
+    canvases.forEach(function (canvas, i) {
+      canvas.id = "IMG_" + nr + "_" + i;
+      nr++;
+      var downloadImg = document.getElementById("download_img");
+      downloadImg.insertAdjacentElement("afterend", canvas);
+    });
+    var last = canvases[canvases.length - 1];
+    last.scrollIntoView();
+    return canvases;
+  });
+}
+
+$(document).ready(function () {
+  var generatorElement = document.getElementById("killfeed-generator");
+  var paramsFile = generatorElement
+    ? generatorElement.getAttribute("params") || "killfeed-rust-params.json"
+    : "killfeed-rust-params.json";
+
+  function loadParams(fileName) {
+    if (typeof images !== "undefined") {
+      return;
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "assets/json/" + fileName, false);
+    try {
+      xhr.send(null);
+      if (xhr.status === 200 || xhr.status === 0) {
+        var params = JSON.parse(xhr.responseText);
+        images = params.images || [];
+        path = params.path || "assets/img/killfeed-icons/rust/";
+        player1 = params.player1 || "Player";
+        player2 = params.player2 || "Enemy";
+        additionals = params.additionals || [];
+        globalFlip = params.flip === true;
+        settings = params.settings || {};
+      } else {
+        console.error(
+          "Failed to load params: " + fileName + " (" + xhr.status + ")",
+        );
+      }
+    } catch (e) {
+      console.error("Failed to load params: " + fileName, e);
+    }
+  }
+
+  loadParams(paramsFile);
+
+  var optionsTpl;
+  var optionsXhr = new XMLHttpRequest();
+  optionsXhr.open("GET", "assets/tpl/options.tpl", false);
+  try {
+    optionsXhr.send(null);
+    if (optionsXhr.status === 200 || optionsXhr.status === 0) {
+      optionsTpl = optionsXhr.responseText;
+    } else {
+      console.error("Failed to load options.tpl (" + optionsXhr.status + ")");
+    }
+  } catch (e) {
+    console.error("Failed to load options.tpl", e);
+  }
+
+  function slugify(name) {
+    return String(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .trim();
+  }
+
+  function additionalId(name) {
+    return slugify(name) + "_toggle";
+  }
+
+  function additionalConfig(name) {
+    var entry = (settings.additionals || {})[name];
+    if (typeof entry === "string") {
+      return { order: entry, margin: "" };
+    }
+    return {
+      order: entry && entry.order ? entry.order : "suffix",
+      margin: entry && entry.margin ? entry.margin : "",
+    };
+  }
+
+  function escapeAttribute(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function buildAdditionalToggles() {
+    var html = '<div class="option-group kg-additional-options">';
+    additionals.forEach(function (name, index) {
+      var order = index + 1;
+      var config = additionalConfig(name);
+      var loc = config.order.toLowerCase();
+      var marginAttr = config.margin
+        ? ' data-margin="' + escapeAttribute(config.margin) + '"'
+        : "";
+      var iconSrc = (typeof path === "string" ? path : "") + name + ".webp";
+      html +=
+        '<div class="option-field kg-additional-field">' +
+        '<div class="option-field-row">' +
+        '<img class="kg-additional-icon" src="' +
+        iconSrc +
+        '" alt="" title="' +
+        name +
+        '" loading="lazy" onerror="this.style.display=\'none\'">' +
+        '<label class="toggle-switch" title="' +
+        name +
+        '">' +
+        '<input type="checkbox" id="' +
+        additionalId(name) +
+        '" aria-label="' +
+        name +
+        '" location="' +
+        loc +
+        '" order="' +
+        order +
+        '"' +
+        marginAttr +
+        ">" +
+        '<span class="toggle-track"><span class="toggle-thumb"></span></span>' +
+        "</label>" +
+        "</div>" +
+        "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function optionLabel(field) {
+    return (
+      '<label class="option-label" for="' +
+      field.id +
+      '">' +
+      field.label +
+      ":</label>"
+    );
+  }
+
+  function optionRow(content) {
+    return '<div class="option-field-row">' + content + "</div>";
+  }
+
+  function buildField(field) {
+    if (field.id === "item_font_weight") {
+      var weightOptions = "";
+      for (var weight = 100; weight <= 900; weight += 100) {
+        weightOptions +=
+          '<option value="' +
+          weight +
+          '"' +
+          (String(field.value) === String(weight) ? " selected" : "") +
+          ">" +
+          weight +
+          "</option>";
+      }
+      return (
+        '<div class="option-field">' +
+        optionLabel(field) +
+        optionRow(
+          '<select id="' + field.id + '">' + weightOptions + "</select>",
+        ) +
+        "</div>"
+      );
+    }
+    if (field.type === "font_family") {
+      return (
+        '<div class="option-field">' +
+        optionLabel(field) +
+        optionRow(
+          '<select id="' +
+            field.id +
+            '"' +
+            (field.value ? ' data-default="' + field.value + '"' : "") +
+            "></select>",
+        ) +
+        "</div>"
+      );
+    }
+    if (field.type === "position") {
+      return (
+        '<div class="option-field">' +
+        optionLabel(field) +
+        optionRow(
+          '<input id="' +
+            field.id +
+            '" type="text" value="' +
+            (field.value || "top:6%;right:2%") +
+            '" placeholder="top:6%;right:2%">' +
+            (field.suffix
+              ? '<span class="option-suffix">' + field.suffix + "</span>"
+              : ""),
+        ) +
+        "</div>"
+      );
+    }
+    if (field.type === "color") {
+      return (
+        '<div class="option-field">' +
+        optionLabel(field) +
+        optionRow(
+          '<input id="' +
+            field.id +
+            '" type="color" value="' +
+            field.value +
+            '">',
+        ) +
+        "</div>"
+      );
+    }
+    if (field.type === "range") {
+      return (
+        '<div class="option-field">' +
+        optionLabel(field) +
+        optionRow(
+          '<input id="' +
+            field.id +
+            '" type="range" min="' +
+            field.min +
+            '" max="' +
+            field.max +
+            '" value="' +
+            field.value +
+            '" step="' +
+            (field.step || 1) +
+            '">' +
+            '<span class="option-suffix" id="' +
+            field.id +
+            '_value">' +
+            field.value +
+            "%</span>",
+        ) +
+        "</div>"
+      );
+    }
+    if (field.type === "number") {
+      return (
+        '<div class="option-field">' +
+        optionLabel(field) +
+        optionRow(
+          '<div class="kg-number-wrap">' +
+            '<button type="button" class="kg-number-btn" data-step="-1" aria-label="Decrease ' +
+            field.label +
+            '">-</button>' +
+            '<input id="' +
+            field.id +
+            '" type="number" value="' +
+            field.value +
+            '" min="' +
+            field.min +
+            '" max="' +
+            field.max +
+            '" step="' +
+            (field.step || 1) +
+            '">' +
+            '<button type="button" class="kg-number-btn" data-step="1" aria-label="Increase ' +
+            field.label +
+            '">+</button>' +
+            "</div>" +
+            (field.suffix
+              ? '<span class="option-suffix">' + field.suffix + "</span>"
+              : ""),
+        ) +
+        "</div>"
+      );
+    }
+    if (field.type === "text") {
+      return (
+        '<div class="option-field">' +
+        optionLabel(field) +
+        optionRow(
+          '<input id="' +
+            field.id +
+            '" type="text" value="' +
+            (field.value || "") +
+            '"' +
+            (field.placeholder
+              ? " placeholder='" + field.placeholder + "'"
+              : "") +
+            ">",
+        ) +
+        "</div>"
+      );
+    }
+    return "";
+  }
+
+  function buildItemStyleGroups() {
+    if (!settings.item_style || !settings.item_style.groups) {
+      return "";
+    }
+    var fontSourceTpl = "";
+    var fsMatch =
+      optionsTpl !== undefined
+        ? optionsTpl.match(
+            /<script[^>]*id="kg-tpl-font-source"[^>]*>([\s\S]*?)<\/script>/,
+          )
+        : null;
+    if (fsMatch) {
+      fontSourceTpl = fsMatch[1].trim();
+    }
+    var html = "";
+    var pendingFields = null;
+    settings.item_style.groups.forEach(function (group) {
+      if (group.type === "font_source") {
+        if (pendingFields === null) {
+          pendingFields = "";
+        }
+        pendingFields += fontSourceTpl;
+        return;
+      }
+      if (pendingFields !== null) {
+        html += '<div class="option-group">' + pendingFields + "</div>";
+      }
+      pendingFields = "";
+      (group.fields || []).forEach(function (field) {
+        pendingFields += buildField(field);
+      });
+    });
+    if (pendingFields !== null) {
+      html += '<div class="option-group">' + pendingFields + "</div>";
+    }
+    return html;
+  }
+
+  function optionsInner(tpl) {
+    var m = tpl.match(/<div id="options">([\s\S]*?)<\/div>\s*<script/);
+    return m ? m[1] : "";
+  }
+
+  function renderOptions() {
+    var optionsEl = document.getElementById("options");
+    if (!optionsEl || optionsTpl === undefined) {
+      return;
+    }
+    var html = optionsInner(optionsTpl)
+      .replace("{{additionals_toggles}}", buildAdditionalToggles())
+      .replace("{{item_style_groups}}", buildItemStyleGroups());
+    optionsEl.innerHTML = html;
+  }
+
+  renderOptions();
+
+  var playerInput1 = document.getElementById("player_1");
+  var playerInput2 = document.getElementById("player_2");
+  if (playerInput1) {
+    playerInput1.value = player1;
+    playerInput1.addEventListener("input", players_apply);
+  }
+  if (playerInput2) {
+    playerInput2.value = player2;
+    playerInput2.addEventListener("input", players_apply);
+  }
+
+  document.addEventListener("click", function (event) {
+    var button =
+      event.target && event.target.closest
+        ? event.target.closest(".kg-number-btn")
+        : null;
+    if (!button) {
+      return;
+    }
+    var row = button.parentNode;
+    var input = row ? row.querySelector("input[type='number']") : null;
+    if (!input) {
+      return;
+    }
+    var direction = button.getAttribute("data-step") === "-1" ? -1 : 1;
+    try {
+      if (direction > 0) {
+        input.stepUp();
+      } else {
+        input.stepDown();
+      }
+    } catch (error) {
+      var step = parseFloat(input.step) || 1;
+      var current = parseFloat(input.value) || 0;
+      input.value = current + direction * step;
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  function resolveFontSrc(src) {
+    try {
+      return new URL(src, window.location.href).href;
+    } catch (e) {
+      return src;
+    }
+  }
+
+  function selectLocalFont() {
+    var select = document.getElementById("item_font_family");
+    var opt = select.options[select.selectedIndex];
+    if (!opt) {
+      return;
+    }
+    var src = resolveFontSrc(opt.getAttribute("data-src") || "");
+    var srcInput = document.getElementById("item_font_src");
+    if (srcInput) {
+      srcInput.value = src;
+    }
+    loadFontFromUrl(src, opt.value);
+  }
+
+  function loadLocalFonts() {
+    var select = document.getElementById("item_font_family");
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "assets/json/fonts.json", false);
+    try {
+      xhr.send(null);
+      if (xhr.status === 200 || xhr.status === 0) {
+        var fonts = JSON.parse(xhr.responseText);
+        select.innerHTML = "";
+        fonts.forEach(function (font) {
+          var opt = document.createElement("option");
+          opt.value = font["font-family"];
+          opt.setAttribute("data-src", font.src || "");
+          opt.textContent = font["font-family"];
+          select.appendChild(opt);
+        });
+        select.value = fonts[0]["font-family"] || "";
+        var defaultFont = select.getAttribute("data-default");
+        if (defaultFont) {
+          for (var fi = 0; fi < select.options.length; fi++) {
+            if (select.options[fi].value === defaultFont) {
+              select.value = defaultFont;
+              break;
+            }
+          }
+        }
+      } else {
+        console.error("Failed to load fonts (" + xhr.status + ")");
+      }
+    } catch (e) {
+      console.error("Failed to load fonts", e);
+    }
+
+    select.addEventListener("change", selectLocalFont);
+    selectLocalFont();
+  }
+
+  loadLocalFonts();
+  applyItemStyle();
+
+  function additionalSlotsHtml(location) {
+    var html = "";
+    var toggles = document.querySelectorAll(
+      ".toggle-switch input[type='checkbox'][location][order]",
+    );
+    for (var i = 0; i < toggles.length; i++) {
+      var toggle = toggles[i];
+      if (toggle.getAttribute("location") !== location) {
+        continue;
+      }
+      var order = parseInt(toggle.getAttribute("order"), 10);
+      var name = additionals[order - 1];
+      var margin = toggle.getAttribute("data-margin");
+      html +=
+        "<span class='additional' data-additional='" +
+        name +
+        "' data-location='" +
+        location +
+        "' data-order='" +
+        order +
+        "'" +
+        (margin ? " style='margin: " + margin + "'" : "") +
+        "></span>";
+    }
+    return html;
+  }
+
+  function renderKillfeedItems() {
+    var items = document.querySelectorAll("killfeed-item");
+    if (!items.length) {
+      return;
+    }
+    items.forEach(function (el) {
+      var img = el.getAttribute("img") || "";
+      var p1 = el.getAttribute("player_name_1") || player1;
+      var p2 = el.getAttribute("player_name_2") || player2;
+      var id = el.getAttribute("id") || "";
+      var location = el.getAttribute("location") || "suffix";
+
+      var isFlipped = globalFlip || el.getAttribute("flip") === "true";
+      var flipClass = isFlipped ? " flip-horizontal" : "";
+
+      var item = document.createElement("div");
+      item.className = "killfeed-item";
+      if (id) {
+        item.id = id;
+      }
+      item.innerHTML =
+        "<p class='player1'>" +
+        p1 +
+        "</p>" +
+        additionalSlotsHtml("prefix") +
+        "<img class='sp_icon" +
+        flipClass +
+        "' alt='Weapon' src='" +
+        path +
+        img +
+        ".webp'>" +
+        additionalSlotsHtml("suffix") +
+        "<p class='player2'>" +
+        p2 +
+        "</p>";
+      el.appendChild(item);
+    });
+  }
+
+  renderKillfeedItems();
+
+  console.log("Length Array: " + images.length);
+
+  var navShare = document.getElementById("nav-share");
+  var navShareLabel = document.getElementById("nav-share-label");
+  if (navShare && navShareLabel) {
+    navShare.addEventListener("click", function () {
+      var url = window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(showCopied);
+      } else {
+        var input = document.createElement("input");
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        showCopied();
+      }
+    });
+    navShareLabel.addEventListener("click", function (evt) {
+      evt.stopPropagation();
+    });
+  }
+
+  function showCopied() {
+    navShareLabel.classList.add("show");
+    clearTimeout(navShare._timer);
+    navShare._timer = setTimeout(function () {
+      navShareLabel.classList.remove("show");
+    }, 1500);
+  }
+
+  function togglePreviewBox() {
+    var box = document.getElementById("preview-box-output");
+    var target = document.getElementById("target");
+    if (!box || !target) {
+      return;
+    }
+    var hasContent = target.querySelector(".killfeed-item") !== null;
+    box.style.display = hasContent ? "flex" : "none";
+  }
+  togglePreviewBox();
+
+  var text = "";
+  for (var j = 0; j < images.length; j++) {
+    var imgObj = images[j];
+    var imgName = typeof imgObj === "object" ? imgObj.name : imgObj;
+
+    var isFlipped =
+      globalFlip || (typeof imgObj === "object" && imgObj.flip === true);
+    var flipClass = isFlipped ? " flip-horizontal" : "";
+
+    text +=
+      "<div id=" +
+      j +
+      "_" +
+      imgName +
+      " class='killfeed-item'>" +
+      "<p class='player1'>" +
+      player1 +
+      "</p>" +
+      additionalSlotsHtml("prefix") +
+      "<img class='sp_icon" +
+      flipClass +
+      "' alt='Weapon' src='" +
+      path +
+      imgName +
+      ".webp'>" +
+      additionalSlotsHtml("suffix") +
+      "<p class='player2'>" +
+      player2 +
+      "</p></div>";
+  }
+  document.getElementById("killfeed-generator").innerHTML = text;
+
+  function getUrlParam(name) {
+    var sources = [window.location.search, window.location.hash];
+    for (var s = 0; s < sources.length; s++) {
+      var source = sources[s] || "";
+      var query = source.indexOf("?") !== -1 ? source.split("?")[1] : "";
+      var pairs = query.split("&");
+      for (var i = 0; i < pairs.length; i++) {
+        var pair = pairs[i].split("=");
+        if (pair[0] && decodeURIComponent(pair[0]) === name) {
+          return decodeURIComponent(pair[1] || "").replace(/^"+|"+$/g, "");
+        }
+      }
+    }
+    return null;
+  }
+
+  var urlP1 = getUrlParam("player_1");
+  var urlP2 = getUrlParam("player_2");
+  if (urlP1 !== null || urlP2 !== null) {
+    var inputP1 = document.getElementById("player_1");
+    var inputP2 = document.getElementById("player_2");
+    if (inputP1 && urlP1 !== null) {
+      inputP1.value = urlP1;
+    }
+    if (inputP2 && urlP2 !== null) {
+      inputP2.value = urlP2;
+    }
+    players_apply();
+    console.log("[url-params] player_1: " + urlP1 + " player_2: " + urlP2);
+  }
+
+  $(".toggle-switch input[type='checkbox'][location][order]").on(
+    "change",
+    function (evt) {
+      var location = $(this).attr("location");
+      var order = parseInt($(this).attr("order"), 10);
+      var enabled = $(this).is(":checked");
+      var name = additionals[order - 1];
+      var selector =
+        ".additional[data-location='" +
+        location +
+        "'][data-order='" +
+        order +
+        "']";
+      var slots = document.querySelectorAll(selector);
+      for (var i = 0; i < slots.length; i++) {
+        slots[i].style.display = enabled ? "flex" : "none";
+        slots[i].innerHTML = enabled
+          ? "<img class='sp_icon' alt='" +
+            name +
+            "' src='" +
+            path +
+            name +
+            ".webp'>"
+          : "";
+      }
+    },
+  );
+
+  var additionalToggleInputs = document.querySelectorAll(
+    ".toggle-switch input[type='checkbox'][location][order]",
+  );
+  for (var ati = 0; ati < additionalToggleInputs.length; ati++) {
+    var additionalToggle = additionalToggleInputs[ati];
+    var additionalOrder = parseInt(additionalToggle.getAttribute("order"), 10);
+    var additionalName = additionals[additionalOrder - 1];
+    if (!additionalName) {
+      continue;
+    }
+    var additionalValue = getUrlParam("ad_" + slugify(additionalName));
+    if (additionalValue === null) {
+      continue;
+    }
+    var additionalOn =
+      additionalValue === "1" || additionalValue.toLowerCase() === "true";
+    if (additionalToggle.checked !== additionalOn) {
+      additionalToggle.checked = additionalOn;
+      $(additionalToggle).trigger("change");
+    }
+  }
+
+  $("#download_img").hide();
+  $("#convert_elem").hide();
+  $("#convert_elem_msg").hide();
+
+  $(".killfeed-item").click(function (evt) {
+    $("#convert_elem").show();
+    var id = $(this).attr("id");
+    console.log("Element selected - ID: " + id);
+    var preview = document.getElementById(id);
+    console.log("killfeed-generator " + id + ": " + preview);
+    window.__selectedKillfeedHTML = preview.innerHTML;
+    var previewWeapon = null;
+    for (var pi = 0; pi < preview.children.length; pi++) {
+      var previewChild = preview.children[pi];
+      if (
+        previewChild.tagName === "IMG" &&
+        previewChild.classList.contains("sp_icon")
+      ) {
+        previewWeapon = previewChild;
+        break;
+      }
+    }
+    if (previewWeapon) {
+      window.__selectedKillfeedName = (previewWeapon.getAttribute("src") || "")
+        .replace(/^.*\//, "")
+        .replace(/\.(webp|png|jpg)$/, "");
+    }
+    document.getElementById("target").innerHTML =
+      "<div id='target_preview' id_target=" +
+      id +
+      " class='killfeed-item'>" +
+      preview.innerHTML +
+      "</div>";
+    togglePreviewBox();
+  });
+
+  $("#download1").on("change", function (evt) {
+    $("#convert_elem").show();
+    var id = $(this).attr("id");
+    console.log("All killfeed-generator selected - ID: " + id);
+    if ($(this).is(":checked")) {
+      var preview = document.getElementById("killfeed-generator");
+      console.log("killfeed-generator " + id + ": " + preview);
+      document.getElementById("target").innerHTML =
+        "<div id='target_preview' id_target=" +
+        id +
+        ">" +
+        preview.innerHTML +
+        "</div>";
+      togglePreviewBox();
+    }
+  });
+
+  document
+    .getElementById("download_link")
+    .addEventListener("click", function (evt) {
+      var allContent = document.getElementById("download1");
+      var canvases = Array.prototype.slice.call(
+        document.querySelectorAll(
+          "#kg-export-canvas-slot canvas, #killfeed-generator-output canvas",
+        ),
+      );
+      if (allContent && allContent.checked) {
+        if (typeof window.rkgClearExport === "function") {
+          window.rkgClearExport();
+        }
+        takeScreenShot().then(function (result) {
+          var list = Array.isArray(result) ? result : [result];
+          list.forEach(downloadCanvas);
+        });
+      } else if (canvases.length) {
+        downloadCanvas(canvases[canvases.length - 1]);
+      } else {
+        takeScreenShot().then(function (result) {
+          var list = Array.isArray(result) ? result : [result];
+          var latest = list[list.length - 1];
+          if (latest) {
+            downloadCanvas(latest);
+          }
+        });
+      }
+    });
+
+  function downloadCanvas(canvas) {
+    canvas.toBlob(function (blob) {
+      if (blob) {
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+        link.download = (canvas.id || "killfeed") + ".png";
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else {
+        console.error("Could not generate image blob.");
+      }
+    }, "image/png");
+  }
+
+  var itemStyleSection = document.querySelector(".item-style-tab");
+  if (itemStyleSection) {
+    ["input", "change"].forEach(function (eventName) {
+      itemStyleSection.addEventListener(eventName, function (evt) {
+        var target = evt.target;
+        if (
+          target &&
+          target.id &&
+          target.id.indexOf("item_") === 0 &&
+          target.id !== "item_font_src"
+        ) {
+          if (
+            target.id === "item_bg_opacity" ||
+            target.id === "item_icon_shadow" ||
+            target.id === "item_border_opacity"
+          ) {
+            var valueId =
+              target.id === "item_bg_opacity"
+                ? "item_bg_opacity_value"
+                : target.id === "item_icon_shadow"
+                  ? "item_icon_shadow_value"
+                  : "item_border_opacity_value";
+            var label = document.getElementById(valueId);
+            if (label) {
+              label.textContent = target.value + "%";
+            }
+          }
+          applyItemStyle();
+        }
+      });
+    });
+  }
+
+  var urlItem = getUrlParam("killfeed-item");
+  if (urlItem !== null) {
+    var gridItems = document.querySelectorAll(
+      "#killfeed-generator .killfeed-item",
+    );
+    for (var gi = 0; gi < gridItems.length; gi++) {
+      var simg = null;
+      for (var ci = 0; ci < gridItems[gi].children.length; ci++) {
+        var simgChild = gridItems[gi].children[ci];
+        if (
+          simgChild.tagName === "IMG" &&
+          simgChild.classList.contains("sp_icon")
+        ) {
+          simg = simgChild;
+          break;
+        }
+      }
+      if (!simg) {
+        simg = gridItems[gi].querySelector("img.sp_icon");
+      }
+      var ssrc = simg ? simg.getAttribute("src") : "";
+      var sname = ssrc.replace(/^.*\//, "").replace(/\.(webp|png|jpg)$/, "");
+      if (sname === urlItem) {
+        gridItems[gi].click();
+        console.log("[url-params] killfeed-item selected: " + sname);
+        break;
+      }
+    }
+  }
+
+  var urlStyleIds = [
+    "item_font_size",
+    "item_icon_size",
+    "item_font_family",
+    "item_font_weight",
+    "item_p_x",
+    "item_p_y",
+    "item_gap",
+    "item_font_color_1",
+    "item_font_color_2",
+    "item_bg_color",
+    "item_bg_opacity",
+    "item_border_width",
+    "item_border_radius",
+    "item_border_color",
+    "item_border_opacity",
+    "item_icon_shadow",
+    "item_font_src",
+    "item_position",
+  ];
+  var styleApplied = false;
+  urlStyleIds.forEach(function (id) {
+    var val = getUrlParam(id);
+    if (val === null) {
+      return;
+    }
+    var el = document.getElementById(id);
+    if (!el) {
+      return;
+    }
+    el.value = val;
+    var label = document.getElementById(id + "_value");
+    if (label) {
+      label.textContent = val + "%";
+    }
+    styleApplied = true;
+  });
+  if (styleApplied) {
+    applyItemStyle();
+    console.log("[url-params] item style overrides applied");
+  }
+
+  function collectUrlParams() {
+    var params = {};
+    ["convert", "export"].forEach(function (key) {
+      var flagValue = getUrlParam(key);
+      if (flagValue !== null) {
+        params[key] = flagValue;
+      }
+    });
+    var p1El = document.getElementById("player_1");
+    var p2El = document.getElementById("player_2");
+    if (p1El) {
+      params["player_1"] = p1El.value;
+    }
+    if (p2El) {
+      params["player_2"] = p2El.value;
+    }
+    if (window.__selectedKillfeedName) {
+      params["killfeed-item"] = window.__selectedKillfeedName;
+    }
+    urlStyleIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) {
+        params[id] = el.value;
+      }
+    });
+    var toggleInputs = document.querySelectorAll(
+      ".toggle-switch input[type='checkbox'][location][order]",
+    );
+    for (var i = 0; i < toggleInputs.length; i++) {
+      var toggleInput = toggleInputs[i];
+      if (!toggleInput.checked) {
+        continue;
+      }
+      var order = parseInt(toggleInput.getAttribute("order"), 10);
+      var name = additionals[order - 1];
+      if (name) {
+        params["ad_" + slugify(name)] = "1";
+      }
+    }
+    return params;
+  }
+
+  function writeUrlParams(params) {
+    var hashAnchor = window.location.hash.split("?")[0] || "";
+    var pairs = [];
+    Object.keys(params).forEach(function (key) {
+      pairs.push(
+        encodeURIComponent(key) + "=" + encodeURIComponent(params[key]),
+      );
+    });
+    var newUrl = window.location.pathname + "?" + pairs.join("&") + hashAnchor;
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", newUrl);
+    } else {
+      window.location.hash = hashAnchor + "?" + pairs.join("&");
+    }
+  }
+
+  var saveButton = document.querySelector(
+    ".kg-modal-foot [data-kg-settings-close]",
+  );
+  if (saveButton) {
+    saveButton.addEventListener("click", function () {
+      writeUrlParams(collectUrlParams());
+      console.log("[url-params] saved");
+    });
+  }
+
+  function urlFlag(name) {
+    var v = getUrlParam(name);
+    if (v === null) {
+      return false;
+    }
+    return v === "" || v.toLowerCase() === "true" || v === "1";
+  }
+
+  if (urlFlag("convert") || urlFlag("export")) {
+    var fontsReady =
+      document.fonts && document.fonts.ready
+        ? document.fonts.ready
+        : Promise.resolve();
+    fontsReady
+      .then(function () {
+        return takeScreenShot();
+      })
+      .then(function (result) {
+        console.log("[url-params] conversion done");
+        if (urlFlag("export")) {
+          var canvases = Array.isArray(result) ? result : [result];
+          if (canvases.length) {
+            downloadCanvas(canvases[canvases.length - 1]);
+          }
+        }
+      });
+  }
+});
