@@ -74,8 +74,7 @@ Then open `http://127.0.0.1:8000/index.html`.
 ├── index.html                     Home page and generator listing
 ├── 404.html                       Not-found page
 ├── robots.txt                     Crawler rules and sitemap location
-├── seo/
-│   └── sitemap.xml                XML sitemap submitted to search engines
+├── sitemap.xml                    XML sitemap submitted to search engines
 ├── killfeed-generator-*.html      Game generator pages
 ├── assets/
 │   ├── css/
